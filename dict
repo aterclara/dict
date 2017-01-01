@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+# Given arg, returns dictionary result
+# Queries online dictionary and then caches the results
+from bs4 import BeautifulSoup
+import urllib,sys,os,hashlib
+
+if len(sys.argv)<2:
+    exit()
+
+cachedir='{HOME}/.local/share/dict/'.format(HOME=os.environ['HOME'])
+baseurl='http://services.aonaware.com/DictService/Default.aspx?action=define&dict=*&query={word}'
+
+def getPath(args):
+    return cachedir + hashlib.md5(args).hexdigest()
+
+def isCached(args):
+    return True if os.path.exists(getPath(args)) else False
+
+def setCache(args,res):
+    path = getPath(args) 
+    if not os.path.exists(path):
+        with open(path, "w") as text_file:
+            text_file.write(res)
+    return res
+
+def getCache(args):
+    path = getPath(args) 
+    if os.path.exists(path):
+        print open(path, 'r').read()
+    else:
+        return False
+
+def getDefinition(args):
+    queryurl=baseurl.format(word=args)
+    html = urllib.urlopen(queryurl).read()
+    soup = BeautifulSoup(html,'html.parser')
+    if soup.find('pre'):
+        # finds the definition element, strips trailing newlines
+        return soup.find('pre').text.rstrip()
+    else:
+        return False
+
+if __name__ == "__main__":
+    args=' '.join(sys.argv[1:])
+    if isCached(args):
+        getCache(args)
+    else:
+        res=getDefinition(args)
+        if res:
+            print setCache(args,res)
+
